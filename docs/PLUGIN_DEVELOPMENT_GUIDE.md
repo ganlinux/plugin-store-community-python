@@ -453,10 +453,9 @@ If your update changes the `permissions` section, the review will be more thorou
 
 | Level | Who | Capabilities |
 |-------|-----|-------------|
-| community | First-time contributors | Skill only, read-only permissions |
-| verified | 5+ approved submissions | Skill + elevated permissions |
-| dapp-official | Known DApp teams | Full capabilities |
-| official | OKX team | Full capabilities |
+| Community Developer | First-time / unverified contributors | Skill only, read-only permissions |
+| Verified Third Party | Known DApp teams or verified community developers | Skill + elevated permissions |
+| OKX Official | OKX team — internal development | Full capabilities |
 
 ---
 

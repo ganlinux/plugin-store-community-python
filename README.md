@@ -59,10 +59,9 @@ PR opened
 
 | Level | Label | Who |
 |-------|-------|-----|
-| official | 🟢 | OKX team |
-| dapp-official | 🔵 | Known DApp teams (verified GitHub org) |
-| verified | ✅ | Community devs with 5+ approved submissions |
-| community | 🟡 | First-time / unverified community |
+| OKX Official | 🟢 | OKX team — internal development |
+| Verified Third Party | 🔵 | Known DApp teams or verified community developers |
+| Community Developer | 🟡 | First-time / unverified community contributors |
 
 ## License
 

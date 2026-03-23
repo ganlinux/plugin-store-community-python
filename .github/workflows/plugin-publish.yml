@@ -105,7 +105,7 @@ jobs:
                 author: { name: $author },
                 category: $category,
                 tags: $tags,
-                type: "community",
+                type: "community-developer",
                 components: {
                   skill: {
                     repo: $repo,
@@ -168,8 +168,8 @@ jobs:
           # Read current registry.json
           CURRENT=$(cat registry.json)
 
-          # Get official plugins (type != "community")
-          OFFICIAL=$(echo "$CURRENT" | jq '[.plugins[] | select(.type != "community")]')
+          # Get non-community plugins (okx-official, verified-third-party)
+          OFFICIAL=$(echo "$CURRENT" | jq '[.plugins[] | select(.type != "community-developer" and .type != "community")]')
 
           # Get new community entries
           COMMUNITY=$(cat /tmp/community_entries.json)

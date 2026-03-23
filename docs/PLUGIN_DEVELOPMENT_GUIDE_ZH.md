@@ -453,10 +453,9 @@ Phase 3：AI 代码审查（Claude）
 
 | 等级 | 谁 | 能力范围 |
 |------|-----|---------|
-| community（社区） | 首次贡献者 | 仅 Skill，只读权限 |
-| verified（认证） | 5 次以上审核通过 | Skill + 更高权限 |
-| dapp-official（DApp 官方） | 知名 DApp 团队 | 完整能力 |
-| official（官方） | OKX 团队 | 完整能力 |
+| Community Developer（社区开发者） | 首次/未验证贡献者 | 仅 Skill，只读权限 |
+| Verified Third Party（认证第三方） | 知名 DApp 团队或通过验证的社区开发者 | Skill + 更高权限 |
+| OKX Official（OKX 官方） | OKX 团队内部开发 | 完整能力 |
 
 ---
 
