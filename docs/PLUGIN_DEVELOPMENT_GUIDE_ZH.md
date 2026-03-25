@@ -1,51 +1,51 @@
-# 插件开发与提交指南
+# plugin 开发与提交指南
 
-> 本指南将带你完成 Plugin Store 插件的开发和提交全流程。读完本文，你将拥有一个可以与 onchainos CLI 集成的完整插件。
+> 本指南将带你完成 Plugin Store plugin 的开发和提交全流程。读完本文，你将拥有一个可以与 onchainos CLI 集成的完整 plugin。
 
 ---
 
 ## 目录
 
-1. [什么是插件？](#1-什么是插件)
+1. [什么是 plugin？](#1-什么是 plugin)
 2. [开始之前](#2-开始之前)
-3. [第一步：生成插件脚手架](#3-第一步生成插件脚手架)
+3. [第一步：生成 plugin 脚手架](#3-第一步生成 plugin 脚手架)
 4. [第二步：编写 plugin.yaml](#4-第二步编写-pluginyaml)
 5. [第三步：编写 SKILL.md](#5-第三步编写-skillmd)
 6. [第四步：声明权限](#6-第四步声明权限)
 7. [第五步：本地验证](#7-第五步本地验证)
 8. [第六步：通过 Pull Request 提交](#8-第六步通过-pull-request-提交)
 9. [提交后会发生什么](#9-提交后会发生什么)
-10. [更新你的插件](#10-更新你的插件)
+10. [更新你的 plugin](#10-更新你的 plugin)
 11. [规则与限制](#11-规则与限制)
 12. [SKILL.md 写作指南](#12-skillmd-写作指南)
-13. [提交含源码的插件（MCP/Binary）](#13-提交含源码的插件mcpbinary)
+13. [提交含源码的 plugin（MCP/Binary）](#13-提交含源码的 pluginmcpbinary)
 14. [onchainos 命令参考](#14-onchainos-命令参考)
 15. [常见问题](#15-常见问题)
 
 ---
 
-## 1. 什么是插件？
+## 1. 什么是 plugin？
 
-插件有一个必须的核心：**SKILL.md** — 一个 Markdown 文档，教 AI Agent 如何执行链上任务。可选地，插件还可以包含 **MCP Server** 或 **Binary**（由我们的 CI 从你的源码编译）。
+plugin 有一个必须的核心：**SKILL.md** — 一个 Markdown 文档，教 AI Agent 如何执行链上任务。可选地，plugin 还可以包含 **MCP Server** 或 **Binary**（由我们的 CI 从你的源码编译）。
 
-**SKILL.md 始终是入口。** 即使你的插件包含 MCP Server，Skill 也负责告诉 AI Agent 有哪些工具可用、什么时候使用。
+**SKILL.md 始终是入口。** 即使你的 plugin 包含 MCP Server，Skill 也负责告诉 AI Agent 有哪些工具可用、什么时候使用。
 
-### 两种类型的插件
+### 两种类型的 plugin
 
 ```
 类型 A：纯 Skill（最常见，任何开发者都可以）
 ────────────────────────────────────────────
-  SKILL.md → 指挥 AI → 调用 onchainos CLI
+ SKILL.md → 指挥 AI → 调用 onchainos CLI
 
 类型 B：Skill + MCP/Binary（仅 Verified Third Party）
 ────────────────────────────────────────────
-  SKILL.md → 指挥 AI → 调用 onchainos CLI
-                      + 调用你的 MCP 工具
-                      + 运行你的二进制命令
+ SKILL.md → 指挥 AI → 调用 onchainos CLI
+ + 调用你的 MCP 工具
+ + 运行你的二进制命令
 
-  你的源码（在你自己的 GitHub 仓库中）
-    → 我们的 CI 编译
-    → 用户安装的是我们编译的产物
+ 你的源码（在你自己的 GitHub 仓库中）
+ → 我们的 CI 编译
+ → 用户安装的是我们编译的产物
 ```
 
 在开始之前选择你的路径：
@@ -64,23 +64,23 @@
 
 - **Git** 和 **GitHub 账号**
 - 安装 **plugin-store CLI**：
-  ```bash
-  # macOS / Linux
-  curl -fsSL https://raw.githubusercontent.com/yz06276/plugin-store/main/install-local.sh | bash
-  ```
+ ```bash
+ # macOS / Linux
+ curl -fsSL https://raw.githubusercontent.com/yz06276/plugin-store/main/install-local.sh | bash
+ ```
 - 安装 **onchainos CLI**（用于测试命令）：
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | bash
-  ```
-- 了解你的插件所涉及的区块链/DeFi 领域
+ ```bash
+ curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | bash
+ ```
+- 了解你的 plugin 所涉及的区块链/DeFi 领域
 
 ### 核心规则
 
-> **所有插件必须通过 onchainos CLI 进行链上操作。** 不允许自行实现价格查询、钱包签名、交易构建或 RPC 调用。onchainos 已经提供了所有这些能力 — 你的插件只需告诉 AI Agent 如何以及何时使用它们。
+> **所有 plugin 必须通过 onchainos CLI 进行链上操作。** 不允许自行实现价格查询、钱包签名、交易构建或 RPC 调用。onchainos 已经提供了所有这些能力 — 你的 plugin 只需告诉 AI Agent 如何以及何时使用它们。
 
 ---
 
-## 3. 第一步：生成插件脚手架
+## 3. 第一步：生成 plugin 脚手架
 
 ```bash
 plugin-store init my-awesome-plugin
@@ -90,18 +90,18 @@ plugin-store init my-awesome-plugin
 
 ```
 my-awesome-plugin/
-├── plugin.yaml                        # 插件清单（需要填写）
+├── plugin.yaml # plugin 清单（需要填写）
 ├── skills/
-│   └── my-awesome-plugin/
-│       ├── SKILL.md                   # 技能定义（需要编写）
-│       └── references/
-│           └── cli-reference.md       # CLI 参考文档（需要编写）
-├── LICENSE                            # MIT 许可证模板
-├── CHANGELOG.md                       # 版本变更记录
-└── README.md                          # 插件说明
+│ └── my-awesome-plugin/
+│ ├── SKILL.md # 技能定义（需要编写）
+│ └── references/
+│ └── cli-reference.md # CLI 参考文档（需要编写）
+├── LICENSE # MIT 许可证模板
+├── CHANGELOG.md # 版本变更记录
+└── README.md # plugin 说明
 ```
 
-**如果你要构建 Skill + MCP/Binary 插件**，你还需要：
+**如果你要构建 Skill + MCP/Binary plugin**，你还需要：
 - 源码在你自己的 GitHub 仓库中（我们来编译，你不需要提交二进制）
 - 在 plugin.yaml 中添加 `build` 配置，指向你的仓库 + commit SHA
 
@@ -109,55 +109,55 @@ my-awesome-plugin/
 
 ## 4. 第二步：编写 plugin.yaml
 
-plugin.yaml 是插件的清单文件，描述插件的基本信息、组件和权限。
+plugin.yaml 是 plugin 的清单文件，描述 plugin 的基本信息、组件和权限。
 
 ### 4A. 纯 Skill 示例
 
 ```yaml
 schema_version: 1
-name: sol-price-checker              # 小写字母 + 连字符，2-40 个字符
-alias: "Solana 价格查询"              # 可选：展示名称（支持中文）
-version: "1.0.0"                     # 语义化版本号 (x.y.z)
+name: sol-price-checker # 小写字母 + 连字符，2-40 个字符
+alias: "Solana 价格查询" # 可选：展示名称（支持中文）
+version: "1.0.0" # 语义化版本号 (x.y.z)
 description: "Query real-time token prices on Solana with market data and trend analysis"
 author:
-  name: "你的名字"
-  github: "your-github-username"     # 必须与 PR 提交者一致
-  email: "you@example.com"          # 可选：用于安全通知
+ name: "你的名字"
+ github: "your-github-username" # 必须与 PR 提交者一致
+ email: "you@example.com" # 可选：用于安全通知
 license: MIT
-category: analytics                  # 见下方分类列表
+category: analytics # 见下方分类列表
 tags:
-  - solana
-  - price
-  - analytics
+ - solana
+ - price
+ - analytics
 
 components:
-  skill:
-    dir: skills/sol-price-checker    # SKILL.md 所在目录的路径
+ skill:
+ dir: skills/sol-price-checker # SKILL.md 所在目录的路径
 
 permissions:
-  wallet:
-    read_balance: false
-    send_transaction: false
-    sign_message: false
-    contract_call: false
-  network:
-    api_calls: []
-    onchainos_commands:
-      - "token search"
-      - "market price"
-      - "market kline"
-      - "token trending"
-  chains:
-    - solana
+ wallet:
+ read_balance: false
+ send_transaction: false
+ sign_message: false
+ contract_call: false
+ network:
+ api_calls: []
+ onchainos_commands:
+ - "token search"
+ - "market price"
+ - "market kline"
+ - "token trending"
+ chains:
+ - solana
 
 extra:
-  protocols: []                      # 例如 [uniswap-v3, raydium]
-  risk_level: low                    # low | medium | high
+ protocols: [] # 例如 [uniswap-v3, raydium]
+ risk_level: low # low | medium | high
 ```
 
 ### 4B. Skill + MCP Server 示例（Verified Third Party）
 
-如果你的插件包含 MCP Server 或二进制，需要添加 `build` 配置。源码在你自己的 GitHub 仓库中 — 我们来编译。
+如果你的 plugin 包含 MCP Server 或二进制，需要添加 `build` 配置。源码在你自己的 GitHub 仓库中 — 我们来编译。
 
 ```yaml
 schema_version: 2
@@ -165,38 +165,38 @@ name: defi-yield-optimizer
 version: "1.0.0"
 description: "跨协议 DeFi 收益优化，含自定义分析"
 author:
-  name: "DeFi Builder"
-  github: "defi-builder"
+ name: "DeFi Builder"
+ github: "defi-builder"
 license: MIT
 category: defi-protocol
 tags: [defi, yield]
 
 components:
-  skill:
-    dir: skills/defi-yield-optimizer   # SKILL.md — 始终必须，是入口
-  mcp:
-    type: binary
-    command: defi-yield-mcp            # 编译后的二进制名
-    args: ["--stdio"]
-    env: [DEFI_API_KEY]
+ skill:
+ dir: skills/defi-yield-optimizer # SKILL.md — 始终必须，是入口
+ mcp:
+ type: binary
+ command: defi-yield-mcp # 编译后的二进制名
+ args: ["--stdio"]
+ env: [DEFI_API_KEY]
 
 build:
-  lang: rust                            # rust | go | typescript | node | python
-  source_repo: "defi-builder/yield-mcp" # 你的 GitHub 源码仓库
-  source_commit: "a1b2c3d4e5f6..."      # 完整的 40 位 commit SHA（锁定版本）
-  source_dir: "."                       # 仓库内路径（默认：根目录）
-  binary_name: defi-yield-mcp           # 编译产物名
+ lang: rust # rust | go | typescript | node | python
+ source_repo: "defi-builder/yield-mcp" # 你的 GitHub 源码仓库
+ source_commit: "a1b2c3d4e5f6..." # 完整的 40 位 commit SHA（锁定版本）
+ source_dir: "." # 仓库内路径（默认：根目录）
+ binary_name: defi-yield-mcp # 编译产物名
 
 permissions:
-  api_calls:
-    - "api.defillama.com"              # 声明所有外部 API
-  chains:
-    - ethereum
-    - base
+ api_calls:
+ - "api.defillama.com" # 声明所有外部 API
+ chains:
+ - ethereum
+ - base
 
 extra:
-  protocols: [morpho, aave]
-  risk_level: medium
+ protocols: [morpho, aave]
+ risk_level: medium
 ```
 
 **与纯 Skill 的关键区别：**
@@ -238,16 +238,16 @@ git rev-parse HEAD
 
 ## 5. 第三步：编写 SKILL.md
 
-SKILL.md 是插件的**唯一入口**。它教 AI Agent 你的插件做什么以及如何使用。纯 Skill 插件编排 onchainos 命令；MCP/Binary 插件还额外编排你的自定义工具。
+SKILL.md 是 plugin 的**唯一入口**。它教 AI Agent 你的 plugin 做什么以及如何使用。纯 Skill plugin 编排 onchainos 命令；MCP/Binary plugin 还额外编排你的自定义工具。
 
 ```
-纯 Skill 插件：
-  SKILL.md → onchainos 命令
+纯 Skill plugin：
+ SKILL.md → onchainos 命令
 
-MCP/Binary 插件：
-  SKILL.md → onchainos 命令
-           + 你的 MCP 工具（calculate_yield, find_route, ...）
-           + 你的二进制命令（my-tool start, my-tool status, ...）
+MCP/Binary plugin：
+ SKILL.md → onchainos 命令
+ + 你的 MCP 工具（calculate_yield, find_route, ...）
+ + 你的二进制命令（my-tool start, my-tool status, ...）
 ```
 
 ### 5A. 模板（纯 Skill）
@@ -259,8 +259,8 @@ description: "简要描述这个技能做什么"
 version: "1.0.0"
 author: "你的名字"
 tags:
-  - 关键词1
-  - 关键词2
+ - 关键词1
+ - 关键词2
 ---
 
 # My Awesome Plugin
@@ -302,9 +302,9 @@ onchainos <命令> <子命令> --参数 值
 - 需要安全扫描 → 使用 `okx-security` 技能
 ```
 
-### 5B. 模板（MCP/Binary 插件）
+### 5B. 模板（MCP/Binary plugin）
 
-如果你的插件包含 MCP Server，SKILL.md 必须同时描述 onchainos 命令和你的 MCP 工具：
+如果你的 plugin 包含 MCP Server，SKILL.md 必须同时描述 onchainos 命令和你的 MCP 工具：
 
 ```markdown
 ---
@@ -313,15 +313,15 @@ description: "DeFi 收益优化 — 自定义分析 + onchainos 执行"
 version: "1.0.0"
 author: "DeFi Builder"
 tags:
-  - defi
-  - yield
+ - defi
+ - yield
 ---
 
 # DeFi 收益优化器
 
 ## Overview
 
-本插件结合自定义收益分析（MCP 工具）和 onchainos 执行能力，
+本 plugin 结合自定义收益分析（MCP 工具）和 onchainos 执行能力，
 帮用户找到并进入最佳的 DeFi 仓位。
 
 ## Pre-flight Checks
@@ -330,7 +330,7 @@ tags:
 2. 已通过 plugin-store 安装 defi-yield-mcp MCP Server
 3. 已设置 DEFI_API_KEY 环境变量
 
-## MCP 工具（本插件提供）
+## MCP 工具（本 plugin 提供）
 
 ### calculate_yield
 计算指定 DeFi 池子的预期 APY。
@@ -384,30 +384,30 @@ tags:
 
 ## 6. 第四步：声明权限
 
-每个插件都必须声明自己能做什么。审查过程中会进行验证。
+每个 plugin 都必须声明自己能做什么。审查过程中会进行验证。
 
 ### 钱包权限
 
 ```yaml
 permissions:
-  wallet:
-    read_balance: true       # 能否读取钱包余额？
-    send_transaction: false   # 能否发起转账？
-    sign_message: false       # 能否签名消息？
-    contract_call: false      # 能否调用智能合约？
+ wallet:
+ read_balance: true # 能否读取钱包余额？
+ send_transaction: false # 能否发起转账？
+ sign_message: false # 能否签名消息？
+ contract_call: false # 能否调用智能合约？
 ```
 
-> **重要提示：** 社区插件首次提交不允许设置 `send_transaction` 或 `contract_call` 为 `true`。你需要达到 Verified Publisher（认证开发者）等级后才能使用（需 5 次以上审核通过的提交）。
+> **重要提示：** 社区 plugin 首次提交不允许设置 `send_transaction` 或 `contract_call` 为 `true`。你需要达到 Verified Publisher（认证开发者）等级后才能使用（需 5 次以上审核通过的提交）。
 
 ### 网络权限
 
 ```yaml
-  network:
-    api_calls: []            # 外部 API 域名（如有）
-    onchainos_commands:      # 你的 SKILL.md 中使用的每一个 onchainos 命令
-      - "token search"
-      - "market price"
-      - "swap quote"
+ network:
+ api_calls: [] # 外部 API 域名（如有）
+ onchainos_commands: # 你的 SKILL.md 中使用的每一个 onchainos 命令
+ - "token search"
+ - "market price"
+ - "swap quote"
 ```
 
 你必须列出 SKILL.md 中引用的每一个 `onchainos` 命令。AI 审查会交叉验证。
@@ -415,18 +415,18 @@ permissions:
 ### 链声明
 
 ```yaml
-  chains:
-    - solana
-    - ethereum
+ chains:
+ - solana
+ - ethereum
 ```
 
-声明你的插件在哪些区块链上运行。
+声明你的 plugin 在哪些区块链上运行。
 
 ---
 
 ## 7. 第五步：本地验证
 
-提交前在本地验证你的插件：
+提交前在本地验证你的 plugin：
 
 ```bash
 plugin-store lint ./my-awesome-plugin/
@@ -445,9 +445,9 @@ Linting ./my-awesome-plugin/...
 ```
 Linting ./my-awesome-plugin/...
 
-  ❌ [E031] name 'My-Plugin' must be lowercase alphanumeric with hyphens only
-  ❌ [E065] permissions field is required
-  ⚠️  [W091] SKILL.md frontmatter missing recommended field: description
+ ❌ [E031] name 'My-Plugin' must be lowercase alphanumeric with hyphens only
+ ❌ [E065] permissions field is required
+ ⚠️ [W091] SKILL.md frontmatter missing recommended field: description
 
 ✗ Plugin 'My-Plugin': 2 error(s), 1 warning(s)
 ```
@@ -465,8 +465,8 @@ Linting ./my-awesome-plugin/...
 | E041 | 缺少 LICENSE | 在提交目录中添加 LICENSE 文件 |
 | E052 | 缺少 SKILL.md | 确保 SKILL.md 存在于 `components.skill.dir` 指定的路径中 |
 | E065 | 缺少 permissions | 在 plugin.yaml 中添加 `permissions` 部分 |
-| E110 | 不允许 MCP 组件 | 社区插件不能包含 MCP 组件 |
-| E111 | 不允许 Binary 组件 | 社区插件不能包含 Binary 组件 |
+| E110 | 不允许 MCP 组件 | 社区 plugin 不能包含 MCP 组件 |
+| E111 | 不允许 Binary 组件 | 社区 plugin 不能包含 Binary 组件 |
 
 ---
 
@@ -483,7 +483,7 @@ git clone git@github.com:你的用户名/plugin-store-community.git
 cd plugin-store-community
 ```
 
-### 3. 将插件复制到 submissions/ 目录
+### 3. 将 plugin 复制到 submissions/ 目录
 
 ```bash
 cp -r /path/to/my-awesome-plugin submissions/my-awesome-plugin
@@ -493,16 +493,16 @@ cp -r /path/to/my-awesome-plugin submissions/my-awesome-plugin
 
 ```
 submissions/
-  my-awesome-plugin/
-    plugin.yaml
-    skills/
-      my-awesome-plugin/
-        SKILL.md
-        references/
-          cli-reference.md
-    LICENSE
-    CHANGELOG.md
-    README.md
+ my-awesome-plugin/
+ plugin.yaml
+ skills/
+ my-awesome-plugin/
+ SKILL.md
+ references/
+ cli-reference.md
+ LICENSE
+ CHANGELOG.md
+ README.md
 ```
 
 ### 5. 提交并推送
@@ -526,8 +526,8 @@ PR 模板会引导你完成检查清单。
 
 ### PR 重要规则
 
-- 每个 PR 只包含 **一个插件**
-- 只修改 `submissions/你的插件名/` 目录下的文件
+- 每个 PR 只包含 **一个 plugin**
+- 只修改 `submissions/你的 plugin 名/` 目录下的文件
 - 不要修改其他文件（README.md、workflows 等）
 - 目录名必须与 plugin.yaml 中的 `name` 字段一致
 
@@ -539,29 +539,29 @@ PR 模板会引导你完成检查清单。
 
 ```
 Phase 2：结构验证（lint）
-  → 自动检查 15+ 项规则
-  → 在 PR 评论中发布检查结果
-  → 如果失败：PR 被阻止，修复后重新推送
+ → 自动检查 15+ 项规则
+ → 在 PR 评论中发布检查结果
+ → 如果失败：PR 被阻止，修复后重新推送
 
 Phase 3：AI 代码审查（Claude）
-  → 读取你的插件 + 最新的 onchainos 源码
-  → 生成 8 个章节的审查报告
-  → 在 PR 评论中发布报告（可折叠展开）
-  → 仅供参考 — 不会阻止合并
+ → 读取你的 plugin + 最新的 onchainos 源码
+ → 生成 8 个章节的审查报告
+ → 在 PR 评论中发布报告（可折叠展开）
+ → 仅供参考 — 不会阻止合并
 ```
 
 ### 人工审核（1-3 天）
 
 维护者会审核：
 
-- 插件是否有意义？
+- plugin 是否有意义？
 - 权限声明是否准确？
 - SKILL.md 写得好不好？
 - 是否存在安全隐患？
 
 ### 合并后
 
-你的插件会自动：
+你的 plugin 会自动：
 
 1. 添加到主 plugin-store 仓库的 `registry.json` 中
 2. 创建 git tag `plugins/my-awesome-plugin@1.0.0`
@@ -569,7 +569,7 @@ Phase 3：AI 代码审查（Claude）
 
 ---
 
-## 10. 更新你的插件
+## 10. 更新你的 plugin
 
 ### 内容更新（修改 SKILL.md、添加命令）
 
@@ -586,14 +586,14 @@ Phase 3：AI 代码审查（Claude）
 
 ## 11. 规则与限制
 
-### 社区插件可以做的
+### 社区 plugin 可以做的
 
 - 使用 SKILL.md 定义技能
 - 引用任何 onchainos CLI 命令
 - 包含参考文档
 - 声明只读的钱包权限
 
-### 社区插件不能做的
+### 社区 plugin 不能做的
 
 - 包含 MCP Server 组件（代码执行）
 - 包含 Binary 组件（代码执行）
@@ -647,13 +647,13 @@ onchainos market price --address <TOKEN_ADDRESS> --chain solana
 
 ---
 
-## 13. 提交含源码的插件（MCP/Binary）
+## 13. 提交含源码的 plugin（MCP/Binary）
 
-> **核心概念：SKILL.md 是一切的入口。** 即使你的插件包含 MCP Server 或二进制文件，SKILL.md 仍然是 AI Agent 的操作指南 — 它告诉 AI 如何编排 onchainos 命令和你的自定义工具。
+> **核心概念：SKILL.md 是一切的入口。** 即使你的 plugin 包含 MCP Server 或二进制文件，SKILL.md 仍然是 AI Agent 的操作指南 — 它告诉 AI 如何编排 onchainos 命令和你的自定义工具。
 
 ### 谁可以提交源码？
 
-仅 Verified Third Party（认证第三方）和 OKX Official（官方）插件。Community Developer（社区开发者）只能提交纯 Skill 插件。
+仅 Verified Third Party（认证第三方）和 OKX Official（官方）plugin。Community Developer（社区开发者）只能提交纯 Skill plugin。
 
 ### 运作方式
 
@@ -672,38 +672,38 @@ name: my-mcp-server
 version: "1.0.0"
 description: "我的 MCP 服务器"
 author:
-  name: "你的名字"
-  github: "your-username"
+ name: "你的名字"
+ github: "your-username"
 license: MIT
 category: defi-protocol
 tags: [defi]
 
 components:
-  skill:
-    dir: skills/my-mcp-server       # SKILL.md 始终必须
-  mcp:
-    type: binary
-    command: my-mcp-server
-    args: ["--stdio"]
-    env: [API_KEY]
+ skill:
+ dir: skills/my-mcp-server # SKILL.md 始终必须
+ mcp:
+ type: binary
+ command: my-mcp-server
+ args: ["--stdio"]
+ env: [API_KEY]
 
 build:
-  lang: rust                          # rust | go | typescript | node | python
-  source_repo: "your-username/my-mcp-server"  # 你的 GitHub 源码仓库
-  source_commit: "abc123def456..."    # 完整的 40 位 commit SHA（锁定版本）
-  source_dir: "."                     # 仓库内的路径（默认：根目录）
-  binary_name: my-mcp-server         # 编译产物名
-  # main: src/index.ts               # TypeScript/Python 需要指定
-  # npm_scope: "@plugin-store"       # Node.js 需要指定
+ lang: rust # rust | go | typescript | node | python
+ source_repo: "your-username/my-mcp-server" # 你的 GitHub 源码仓库
+ source_commit: "abc123def456..." # 完整的 40 位 commit SHA（锁定版本）
+ source_dir: "." # 仓库内的路径（默认：根目录）
+ binary_name: my-mcp-server # 编译产物名
+ # main: src/index.ts # TypeScript/Python 需要指定
+ # npm_scope: "@plugin-store" # Node.js 需要指定
 
 permissions:
-  wallet:
-    read_balance: true
-  network:
-    onchainos_commands:
-      - "token info"
-      - "swap quote"
-  chains: [ethereum]
+ wallet:
+ read_balance: true
+ network:
+ onchainos_commands:
+ - "token info"
+ - "swap quote"
+ chains: [ethereum]
 ```
 
 ### 如何获取 commit SHA
@@ -720,20 +720,20 @@ git rev-parse HEAD
 源码在你自己的仓库中。你只需要把元数据 + SKILL 提交到 community 仓库：
 
 ```
-submissions/my-mcp-server/            ← 在 community 仓库中（很小，约 20KB）
-  plugin.yaml                         # 包含 build 配置，指向你的仓库
-  skills/my-mcp-server/
-    SKILL.md                          # AI Agent 的入口
-    references/
-  LICENSE
-  CHANGELOG.md
-  README.md
+submissions/my-mcp-server/ ← 在 community 仓库中（很小，约 20KB）
+ plugin.yaml # 包含 build 配置，指向你的仓库
+ skills/my-mcp-server/
+ SKILL.md # AI Agent 的入口
+ references/
+ LICENSE
+ CHANGELOG.md
+ README.md
 
-your-username/my-mcp-server           ← 你自己的 GitHub 仓库（源码）
-  Cargo.toml                          # （Rust 示例）
-  src/
-    main.rs
-    lib.rs
+your-username/my-mcp-server ← 你自己的 GitHub 仓库（源码）
+ Cargo.toml # （Rust 示例）
+ src/
+ main.rs
+ lib.rs
 ```
 
 ### 支持的语言
@@ -801,7 +801,7 @@ your-username/my-mcp-server           ← 你自己的 GitHub 仓库（源码）
 A: 不可以。所有链上操作必须通过 onchainos CLI。如果你需要 onchainos 尚未提供的能力，请在 onchainos 仓库提交 feature request。
 
 **Q: 我可以包含二进制文件或 MCP Server 吗？**
-A: 可以，前提是你是 Verified Third Party 或 OKX Official 开发者。你在自己的 GitHub 仓库中提交源码，我们的 CI 负责编译。在 plugin.yaml 中添加 `build` 配置，包含 `source_repo` 和 `source_commit`。详见第 13 节。Community Developer 只能提交纯 Skill 插件。
+A: 可以，前提是你是 Verified Third Party 或 OKX Official 开发者。你在自己的 GitHub 仓库中提交源码，我们的 CI 负责编译。在 plugin.yaml 中添加 `build` 配置，包含 `source_repo` 和 `source_commit`。详见第 13 节。Community Developer 只能提交纯 Skill plugin。
 
 **Q: 审核需要多长时间？**
 A: 自动化检查约 5 分钟完成。人工审核通常需要 1-3 个工作日。
@@ -809,14 +809,14 @@ A: 自动化检查约 5 分钟完成。人工审核通常需要 1-3 个工作日
 **Q: AI 审查标记了问题怎么办？**
 A: AI 审查仅供参考 — 不会阻止你的 PR。但人工审核者会阅读 AI 报告。建议解决标记的问题以加快审批速度。
 
-**Q: 发布后可以更新插件吗？**
+**Q: 发布后可以更新 plugin 吗？**
 A: 可以。提交新的 PR，包含更新后的文件和升级的版本号。
 
 **Q: 如何成为认证开发者（Verified Publisher）？**
-A: 累计 5 次以上审核通过的插件提交后，可以申请 Verified Publisher 等级。这将解锁更高权限和更快的审核速度。
+A: 累计 5 次以上审核通过的 plugin 提交后，可以申请 Verified Publisher 等级。这将解锁更高权限和更快的审核速度。
 
 **Q: 本地 `plugin-store lint` 通过了，但 GitHub 检查失败？**
-A: 确保你使用的是最新版本的 plugin-store CLI。同时确保 PR 只修改了 `submissions/你的插件名/` 目录下的文件。
+A: 确保你使用的是最新版本的 plugin-store CLI。同时确保 PR 只修改了 `submissions/你的 plugin 名/` 目录下的文件。
 
 **Q: 错误 E122 "source_repo is not valid" 是什么意思？**
 A: `build.source_repo` 必须是 `owner/repo` 格式（如 `your-username/my-server`）。不要包含 `https://github.com/` 或 `.git`。
@@ -825,7 +825,7 @@ A: `build.source_repo` 必须是 `owner/repo` 格式（如 `your-username/my-ser
 A: `build.source_commit` 必须是完整的 40 位提交哈希，不能是短 SHA 或分支名。在你的源码仓库中运行 `git rev-parse HEAD` 获取完整哈希。
 
 **Q: 错误 E120 "must also include a Skill component" 是什么意思？**
-A: 每个包含 `build` 配置的插件都必须有 SKILL.md。Skill 是入口 — 它告诉 AI Agent 如何使用你的 MCP Server 或二进制。
+A: 每个包含 `build` 配置的 plugin 都必须有 SKILL.md。Skill 是入口 — 它告诉 AI Agent 如何使用你的 MCP Server 或二进制。
 
 **Q: 错误 E130 "pre-compiled binary file is not allowed" 是什么意思？**
 A: 你在提交目录中包含了编译好的文件（.exe、.dll、.so、.wasm 等）。请删除它 — 我们从你的源码编译，你不需要提交二进制。
