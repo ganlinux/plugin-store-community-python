@@ -228,6 +228,43 @@ jobs:
               echo '```'
               echo ""
             done
+
+            # If plugin has source code (build section), include it for review
+            BUILD_DIR=$(python3 -c "
+          import yaml
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          build = data.get('build')
+          if build:
+              print(build.get('source_dir', ''))
+          " 2>/dev/null || echo "")
+
+            if [ -n "$BUILD_DIR" ] && [ -d "${PLUGIN_DIR}/${BUILD_DIR}" ]; then
+              echo ""
+              echo "# Source Code (for security review)"
+              echo ""
+              # Include source files, truncate large files to first 300 lines
+              find "${PLUGIN_DIR}/${BUILD_DIR}" -type f \
+                \( -name "*.rs" -o -name "*.go" -o -name "*.ts" -o -name "*.js" \
+                   -o -name "*.py" -o -name "*.toml" -o -name "*.json" -o -name "*.yaml" \
+                   -o -name "*.yml" -o -name "*.lock" -o -name "*.mod" -o -name "*.sum" \) \
+                | sort | while read src_file; do
+                REL_PATH=$(echo "$src_file" | sed "s|${PLUGIN_DIR}/||")
+                FILE_LINES=$(wc -l < "$src_file")
+                EXT="${src_file##*.}"
+                echo "## Source: ${REL_PATH} (${FILE_LINES} lines)"
+                echo "\`\`\`${EXT}"
+                if [ "$FILE_LINES" -gt 300 ]; then
+                  head -300 "$src_file"
+                  echo ""
+                  echo "... (truncated, ${FILE_LINES} total lines)"
+                else
+                  cat "$src_file"
+                fi
+                echo '```'
+                echo ""
+              done
+            fi
           } > /tmp/plugin_content.txt
 
           # Read system prompt

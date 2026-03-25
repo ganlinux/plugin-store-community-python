@@ -104,7 +104,34 @@ Produce a comprehensive review report in EXACTLY this markdown format. Do not ad
 
 ### Overall Security Rating: [🟢 Low Risk | 🟡 Medium Risk | 🔴 High Risk]
 
-## 6. Code Review
+## 6. Source Code Security (if source code is included)
+
+*Skip this section entirely if the plugin has no source code / no build section.*
+
+### Language & Build Config
+[Language, entry point, binary name]
+
+### Dependency Analysis
+[List key dependencies. Flag any that are: unmaintained, have known vulnerabilities, or are suspicious]
+
+### Code Safety Audit
+
+| Check | Result | Detail |
+|-------|--------|--------|
+| Hardcoded secrets (API keys, private keys, mnemonics) | [✅/❌] | |
+| Network requests to undeclared endpoints | [✅/❌] | [list endpoints found] |
+| File system access outside plugin scope | [✅/❌] | |
+| Dynamic code execution (eval, exec, shell commands) | [✅/❌] | |
+| Environment variable access beyond declared env | [✅/❌] | |
+| Build scripts with side effects (build.rs, postinstall) | [✅/❌] | |
+| Unsafe code blocks (Rust) / CGO (Go) | [✅/❌/N/A] | |
+
+### Does SKILL.md accurately describe what the source code does?
+[Yes/No — check if the SKILL.md promises match the actual code behavior]
+
+### Verdict: [✅ Source Safe | ⚠️ Needs Review | ❌ Unsafe Code Found]
+
+## 7. Code Review
 
 ### Quality Score: [score]/100
 
@@ -125,11 +152,11 @@ Produce a comprehensive review report in EXACTLY this markdown format. Do not ad
 - 🟡 Important: [should fix]
 - 🔵 Minor: [nice to have]
 
-## 7. Recommendations
+## 8. Recommendations
 
 [Numbered list of actionable improvements, ordered by priority]
 
-## 8. Reviewer Summary
+## 9. Reviewer Summary
 
 **One-line verdict**: [concise summary for the human reviewer]
 

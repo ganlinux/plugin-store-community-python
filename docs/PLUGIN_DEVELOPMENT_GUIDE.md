@@ -18,8 +18,9 @@
 10. [Updating Your Plugin](#10-updating-your-plugin)
 11. [Rules & Restrictions](#11-rules--restrictions)
 12. [SKILL.md Writing Guide](#12-skillmd-writing-guide)
-13. [onchainos Command Reference](#13-onchainos-command-reference)
-14. [FAQ](#14-faq)
+13. [Submitting Plugins with Source Code (MCP/Binary)](#13-submitting-plugins-with-source-code-mcpbinary)
+14. [onchainos Command Reference](#14-onchainos-command-reference)
+15. [FAQ](#15-faq)
 
 ---
 
@@ -492,7 +493,117 @@ onchainos market price --address <TOKEN_ADDRESS> --chain solana
 
 ---
 
-## 13. onchainos Command Reference
+## 13. Submitting Plugins with Source Code (MCP/Binary)
+
+> **Important:** SKILL.md is always the entry point. Even if your plugin includes an MCP server or binary, the SKILL.md is what tells the AI agent how to orchestrate everything — onchainos commands, your MCP tools, and your binary commands.
+
+### Who Can Submit Source Code?
+
+Verified Third Party and OKX Official plugins only. Community Developer plugins are limited to Skill-only submissions.
+
+### How It Works
+
+```
+You submit source code → Our CI compiles it → Users install our compiled artifact
+You never submit binaries. We never modify your source code.
+```
+
+### plugin.yaml with build config
+
+```yaml
+schema_version: 2
+name: my-mcp-server
+version: "1.0.0"
+description: "My custom MCP server"
+author:
+  name: "Your Name"
+  github: "your-username"
+license: MIT
+category: defi-protocol
+tags: [defi]
+
+components:
+  skill:
+    dir: skills/my-mcp-server       # SKILL.md is ALWAYS required
+  mcp:
+    type: binary
+    command: my-mcp-server
+    args: ["--stdio"]
+    env: [API_KEY]
+
+build:
+  lang: rust                          # rust | go | typescript | node | python
+  source_dir: src/                    # Where your source code lives
+  binary_name: my-mcp-server         # Name of the compiled output
+  # main: src/index.ts               # Required for typescript/python
+  # npm_scope: "@plugin-store"       # Required for node
+
+permissions:
+  wallet:
+    read_balance: true
+  network:
+    onchainos_commands:
+      - "token info"
+      - "swap quote"
+  chains: [ethereum]
+```
+
+### Directory Structure
+
+```
+submissions/my-mcp-server/
+  plugin.yaml                         # With build section
+  skills/my-mcp-server/
+    SKILL.md                          # The AI agent's entry point
+    references/
+  src/                                # Your source code
+    Cargo.toml                        # (Rust example)
+    src/
+      main.rs
+      lib.rs
+  LICENSE
+  CHANGELOG.md
+  README.md
+```
+
+### Supported Languages
+
+| Language | Entry File | Build Tool | Output |
+|----------|-----------|------------|--------|
+| Rust | `Cargo.toml` | `cargo build --release` | Native binary |
+| Go | `go.mod` | `go build` | Native binary |
+| TypeScript | `package.json` + `build.main` | `bun build --compile` | Bundled binary |
+| Node.js | `package.json` | `npm publish` | npm package |
+| Python | `pyproject.toml` + `build.main` | `PyInstaller` | Bundled binary |
+
+### SKILL.md as the Orchestrator
+
+Your SKILL.md tells the AI agent how to use **both** onchainos commands and your custom MCP tools:
+
+```markdown
+## Commands
+
+### Check Yield (uses your MCP tool)
+Call MCP tool `calculate_yield` with pool address and chain.
+
+### Execute Deposit (uses onchainos + your MCP)
+1. Call MCP tool `find_best_route` for the chosen pool
+2. Run `onchainos swap quote --from USDC --to POOL_TOKEN`
+3. **Ask user to confirm** amount and expected yield
+4. Run `onchainos swap swap ...` to execute
+5. Call MCP tool `monitor_position` to start tracking
+```
+
+### What You Cannot Do
+
+- Submit pre-compiled binaries (.exe, .dll, .so, .wasm) — E130
+- Declare MCP/Binary without a build section — E110/E111
+- Have source code larger than 10MB — E126
+- Include build scripts that download from the internet during compilation
+
+---
+
+## 14. onchainos Command Reference
 
 Your SKILL.md should only use onchainos CLI commands. Here are the available top-level commands:
 
@@ -514,7 +625,7 @@ For the full subcommand list, run `onchainos <command> --help` or see the [oncha
 
 ---
 
-## 14. FAQ
+## 15. FAQ
 
 **Q: Can I submit a plugin that calls external APIs directly?**
 A: No. All on-chain operations must go through onchainos CLI. If you need a capability that onchainos doesn't provide, open a feature request in the onchainos repo.

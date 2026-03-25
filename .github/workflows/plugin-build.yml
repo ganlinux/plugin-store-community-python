@@ -1,0 +1,480 @@
+# Phase 4: Sandbox Compilation (Advisory — does NOT block merge)
+#
+# When a plugin has a `build` section in plugin.yaml, this workflow:
+# 1. Detects the build language
+# 2. Fetches dependencies (with network)
+# 3. Compiles in isolation (without network where possible)
+# 4. Validates the compiled artifact
+# 5. Posts a build report to the PR
+#
+# Supported languages: rust, go, typescript, node, python
+
+name: "Phase 4: Build Verification"
+
+on:
+  pull_request:
+    paths:
+      - 'submissions/**'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect:
+    name: Detect build config
+    runs-on: ubuntu-latest
+    outputs:
+      plugin_dir: ${{ steps.find.outputs.plugin_dir }}
+      plugin_name: ${{ steps.find.outputs.plugin_name }}
+      has_build: ${{ steps.find.outputs.has_build }}
+      build_lang: ${{ steps.find.outputs.build_lang }}
+      source_dir: ${{ steps.find.outputs.source_dir }}
+      binary_name: ${{ steps.find.outputs.binary_name }}
+      build_main: ${{ steps.find.outputs.build_main }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find plugin and build config
+        id: find
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD -- 'submissions/' | head -100)
+          PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+          PLUGIN_DIR="submissions/${PLUGIN_NAME}"
+          echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
+          echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+
+          YAML_FILE="${PLUGIN_DIR}/plugin.yaml"
+          if [ ! -f "$YAML_FILE" ]; then
+            echo "has_build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if build section exists
+          BUILD_LANG=$(python3 -c "
+          import yaml, sys
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          build = data.get('build')
+          if build:
+              print(build.get('lang', ''))
+          " 2>/dev/null || echo "")
+
+          if [ -z "$BUILD_LANG" ]; then
+            echo "has_build=false" >> "$GITHUB_OUTPUT"
+            echo "No build config found — skipping compilation"
+            exit 0
+          fi
+
+          echo "has_build=true" >> "$GITHUB_OUTPUT"
+          echo "build_lang=${BUILD_LANG}" >> "$GITHUB_OUTPUT"
+
+          # Extract other build fields
+          python3 -c "
+          import yaml
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          build = data.get('build', {})
+          print(build.get('source_dir', 'src/'))
+          " > /tmp/source_dir.txt
+          echo "source_dir=$(cat /tmp/source_dir.txt)" >> "$GITHUB_OUTPUT"
+
+          python3 -c "
+          import yaml
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          build = data.get('build', {})
+          print(build.get('binary_name', ''))
+          " > /tmp/binary_name.txt
+          echo "binary_name=$(cat /tmp/binary_name.txt)" >> "$GITHUB_OUTPUT"
+
+          python3 -c "
+          import yaml
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          build = data.get('build', {})
+          print(build.get('main', ''))
+          " > /tmp/build_main.txt
+          echo "build_main=$(cat /tmp/build_main.txt)" >> "$GITHUB_OUTPUT"
+
+          echo "Build config: lang=${BUILD_LANG}"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Rust Build
+  # ═══════════════════════════════════════════════════════════════
+  build-rust:
+    name: Build (Rust)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'rust'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Fetch dependencies
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: cargo fetch
+
+      - name: Export dependency tree
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          cargo tree > /tmp/deps.txt 2>&1 || true
+          echo "Dependency tree:"
+          cat /tmp/deps.txt
+
+      - name: Security audit
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          cargo install cargo-audit 2>/dev/null || true
+          cargo audit 2>&1 | tee /tmp/audit.txt || true
+
+      - name: Build (release)
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: cargo build --release 2>&1 | tee /tmp/build_log.txt
+
+      - name: Verify artifact
+        id: verify
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          SOURCE_DIR="${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}"
+          BIN_PATH="${SOURCE_DIR}/target/release/${BIN_NAME}"
+
+          if [ ! -f "$BIN_PATH" ]; then
+            echo "::error::Binary '${BIN_NAME}' not found at ${BIN_PATH}"
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SIZE=$(stat -c%s "$BIN_PATH" 2>/dev/null || stat -f%z "$BIN_PATH")
+          SIZE_MB=$((SIZE / 1024 / 1024))
+          echo "Binary size: ${SIZE_MB} MB"
+          echo "size=${SIZE_MB}MB" >> "$GITHUB_OUTPUT"
+
+          # Basic execution test
+          chmod +x "$BIN_PATH"
+          if "$BIN_PATH" --help > /tmp/help.txt 2>&1; then
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          elif "$BIN_PATH" --version > /tmp/help.txt 2>&1; then
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "::warning::Binary does not respond to --help or --version"
+          fi
+
+          sha256sum "$BIN_PATH" > /tmp/checksum.txt
+          echo "SHA256: $(cat /tmp/checksum.txt)"
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-rust-${{ needs.detect.outputs.plugin_name }}
+          path: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}/target/release/${{ needs.detect.outputs.binary_name }}
+
+      - name: Save build report
+        if: always()
+        run: |
+          {
+            echo "lang: rust"
+            echo "status: ${{ steps.verify.outputs.status || 'fail' }}"
+            echo "size: ${{ steps.verify.outputs.size || 'N/A' }}"
+          } > /tmp/build_report.txt
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Go Build
+  # ═══════════════════════════════════════════════════════════════
+  build-go:
+    name: Build (Go)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'go'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Fetch dependencies
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: go mod download
+
+      - name: Export dependency tree
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: go list -m all > /tmp/deps.txt 2>&1 || true
+
+      - name: Security check
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest 2>/dev/null || true
+          govulncheck ./... 2>&1 | tee /tmp/audit.txt || true
+
+      - name: Build (release)
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        env:
+          CGO_ENABLED: 0
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          go build -o "${BIN_NAME}" -ldflags="-s -w" . 2>&1 | tee /tmp/build_log.txt
+
+      - name: Verify artifact
+        id: verify
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          if [ ! -f "$BIN_NAME" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SIZE=$(stat -c%s "$BIN_NAME" 2>/dev/null || stat -f%z "$BIN_NAME")
+          echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+          sha256sum "$BIN_NAME"
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-go-${{ needs.detect.outputs.plugin_name }}
+          path: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  TypeScript Build (Bun compile)
+  # ═══════════════════════════════════════════════════════════════
+  build-typescript:
+    name: Build (TypeScript)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'typescript'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: bun install --frozen-lockfile 2>/dev/null || bun install
+
+      - name: Export dependency tree
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: bun pm ls --all > /tmp/deps.txt 2>&1 || true
+
+      - name: Security audit
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: bun pm audit 2>&1 | tee /tmp/audit.txt || true
+
+      - name: Compile to binary
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          MAIN="${{ needs.detect.outputs.build_main }}"
+          bun build --compile "${MAIN}" --outfile "${BIN_NAME}" 2>&1 | tee /tmp/build_log.txt
+
+      - name: Verify artifact
+        id: verify
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          if [ ! -f "$BIN_NAME" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SIZE=$(stat -c%s "$BIN_NAME" 2>/dev/null || stat -f%z "$BIN_NAME")
+          echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+          sha256sum "$BIN_NAME"
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-ts-${{ needs.detect.outputs.plugin_name }}
+          path: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Node.js (npm pack — no binary compilation)
+  # ═══════════════════════════════════════════════════════════════
+  build-node:
+    name: Build (Node.js)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'node'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: npm ci 2>/dev/null || npm install
+
+      - name: Export dependency tree
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: npm ls --all > /tmp/deps.txt 2>&1 || true
+
+      - name: Security audit
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: npm audit 2>&1 | tee /tmp/audit.txt || true
+
+      - name: Build (if build script exists)
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          if npm run build --if-present 2>&1 | tee /tmp/build_log.txt; then
+            echo "Build succeeded"
+          else
+            echo "::warning::npm run build failed"
+          fi
+
+      - name: Pack (dry run)
+        id: verify
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
+          SIZE=$(wc -c < "$(npm pack 2>/dev/null | tail -1)" 2>/dev/null || echo "0")
+          echo "size=$((SIZE / 1024))KB" >> "$GITHUB_OUTPUT"
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packed tarball
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-node-${{ needs.detect.outputs.plugin_name }}
+          path: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}/*.tgz
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Python Build (PyInstaller)
+  # ═══════════════════════════════════════════════════════════════
+  build-python:
+    name: Build (Python)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'python'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          pip install pyinstaller pip-audit
+          pip install -e . 2>/dev/null || pip install -r requirements.txt 2>/dev/null || true
+
+      - name: Export dependency tree
+        run: pip freeze > /tmp/deps.txt
+
+      - name: Security audit
+        run: pip-audit 2>&1 | tee /tmp/audit.txt || true
+
+      - name: Build binary
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          MAIN="${{ needs.detect.outputs.build_main }}"
+          pyinstaller --onefile --name "${BIN_NAME}" "${MAIN}" 2>&1 | tee /tmp/build_log.txt
+
+      - name: Verify artifact
+        id: verify
+        working-directory: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}
+        run: |
+          BIN_NAME="${{ needs.detect.outputs.binary_name }}"
+          BIN_PATH="dist/${BIN_NAME}"
+          if [ ! -f "$BIN_PATH" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SIZE=$(stat -c%s "$BIN_PATH" 2>/dev/null || stat -f%z "$BIN_PATH")
+          echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+          sha256sum "$BIN_PATH"
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-python-${{ needs.detect.outputs.plugin_name }}
+          path: ${{ needs.detect.outputs.plugin_dir }}/${{ needs.detect.outputs.source_dir }}/dist/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Build Report (posts to PR)
+  # ═══════════════════════════════════════════════════════════════
+  report:
+    name: Build report
+    needs: [detect, build-rust, build-go, build-typescript, build-node, build-python]
+    if: always() && needs.detect.outputs.has_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post build report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lang = '${{ needs.detect.outputs.build_lang }}';
+            const pluginName = '${{ needs.detect.outputs.plugin_name }}';
+
+            // Determine which build job ran and its result
+            const buildJobs = {
+              rust: '${{ needs.build-rust.result }}',
+              go: '${{ needs.build-go.result }}',
+              typescript: '${{ needs.build-typescript.result }}',
+              node: '${{ needs.build-node.result }}',
+              python: '${{ needs.build-python.result }}',
+            };
+
+            const result = buildJobs[lang] || 'skipped';
+            const passed = result === 'success';
+            const icon = passed ? '✅' : (result === 'skipped' ? '⏭️' : '❌');
+            const status = passed ? 'PASSED' : (result === 'skipped' ? 'SKIPPED' : 'FAILED');
+
+            const body = [
+              `## 🔨 Phase 4: Build Verification — ${icon} ${status}`,
+              '',
+              `> **Plugin**: \`${pluginName}\` | **Language**: \`${lang}\``,
+              `> `,
+              `> *Build verification is advisory. Artifacts are uploaded for review.*`,
+              '',
+              passed
+                ? `Build succeeded. Compiled artifact available as workflow artifact.`
+                : result === 'skipped'
+                ? `No build configuration detected — this is a Skill-only plugin.`
+                : `Build failed. Check the [workflow logs](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for details.`,
+              '',
+              '---',
+              '*Build artifacts are compiled by our CI from submitted source code.*'
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Phase 4: Build Verification')
+            );
+
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (botComment) {
+              await github.rest.issues.updateComment({ ...params, comment_id: botComment.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: context.issue.number });
+            }

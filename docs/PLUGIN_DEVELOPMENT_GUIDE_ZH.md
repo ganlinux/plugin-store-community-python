@@ -18,8 +18,9 @@
 10. [更新你的插件](#10-更新你的插件)
 11. [规则与限制](#11-规则与限制)
 12. [SKILL.md 写作指南](#12-skillmd-写作指南)
-13. [onchainos 命令参考](#13-onchainos-命令参考)
-14. [常见问题](#14-常见问题)
+13. [提交含源码的插件（MCP/Binary）](#13-提交含源码的插件mcpbinary)
+14. [onchainos 命令参考](#14-onchainos-命令参考)
+15. [常见问题](#15-常见问题)
 
 ---
 
@@ -492,7 +493,117 @@ onchainos market price --address <TOKEN_ADDRESS> --chain solana
 
 ---
 
-## 13. onchainos 命令参考
+## 13. 提交含源码的插件（MCP/Binary）
+
+> **核心概念：SKILL.md 是一切的入口。** 即使你的插件包含 MCP Server 或二进制文件，SKILL.md 仍然是 AI Agent 的操作指南 — 它告诉 AI 如何编排 onchainos 命令和你的自定义工具。
+
+### 谁可以提交源码？
+
+仅 Verified Third Party（认证第三方）和 OKX Official（官方）插件。Community Developer（社区开发者）只能提交纯 Skill 插件。
+
+### 运作方式
+
+```
+你提交源码 → 我们的 CI 编译 → 用户安装的是我们编译的产物
+你永远不提交二进制文件。我们永远不修改你的源码。
+```
+
+### 包含 build 配置的 plugin.yaml
+
+```yaml
+schema_version: 2
+name: my-mcp-server
+version: "1.0.0"
+description: "我的 MCP 服务器"
+author:
+  name: "你的名字"
+  github: "your-username"
+license: MIT
+category: defi-protocol
+tags: [defi]
+
+components:
+  skill:
+    dir: skills/my-mcp-server       # SKILL.md 始终必须
+  mcp:
+    type: binary
+    command: my-mcp-server
+    args: ["--stdio"]
+    env: [API_KEY]
+
+build:
+  lang: rust                          # rust | go | typescript | node | python
+  source_dir: src/                    # 源码目录
+  binary_name: my-mcp-server         # 编译产物名
+  # main: src/index.ts               # TypeScript/Python 需要指定
+  # npm_scope: "@plugin-store"       # Node.js 需要指定
+
+permissions:
+  wallet:
+    read_balance: true
+  network:
+    onchainos_commands:
+      - "token info"
+      - "swap quote"
+  chains: [ethereum]
+```
+
+### 目录结构
+
+```
+submissions/my-mcp-server/
+  plugin.yaml                         # 包含 build 配置
+  skills/my-mcp-server/
+    SKILL.md                          # AI Agent 的入口
+    references/
+  src/                                # 你的源码
+    Cargo.toml                        # （Rust 示例）
+    src/
+      main.rs
+      lib.rs
+  LICENSE
+  CHANGELOG.md
+  README.md
+```
+
+### 支持的语言
+
+| 语言 | 入口文件 | 编译工具 | 产物 |
+|------|---------|---------|------|
+| Rust | `Cargo.toml` | `cargo build --release` | 原生二进制 |
+| Go | `go.mod` | `go build` | 原生二进制 |
+| TypeScript | `package.json` + `build.main` | `bun build --compile` | 打包二进制 |
+| Node.js | `package.json` | `npm publish` | npm 包 |
+| Python | `pyproject.toml` + `build.main` | `PyInstaller` | 打包二进制 |
+
+### SKILL.md 作为编排者
+
+你的 SKILL.md 告诉 AI Agent 如何同时使用 onchainos 命令和你的 MCP 工具：
+
+```markdown
+## Commands
+
+### 查询收益（使用你的 MCP 工具）
+调用 MCP 工具 `calculate_yield`，传入池子地址和链。
+
+### 执行存入（使用 onchainos + 你的 MCP）
+1. 调用 MCP 工具 `find_best_route` 寻找最优路径
+2. 执行 `onchainos swap quote --from USDC --to POOL_TOKEN`
+3. **请用户确认** 金额和预期收益
+4. 执行 `onchainos swap swap ...`
+5. 调用 MCP 工具 `monitor_position` 开始监控
+```
+
+### 不允许的操作
+
+- 提交预编译的二进制文件（.exe、.dll、.so、.wasm）— E130
+- 声明 MCP/Binary 但没有 build 配置 — E110/E111
+- 源码大于 10MB — E126
+- 编译脚本在编译期间从网络下载内容
+
+---
+
+## 14. onchainos 命令参考
 
 你的 SKILL.md 只应使用 onchainos CLI 命令。以下是可用的顶级命令：
 
@@ -514,7 +625,7 @@ onchainos market price --address <TOKEN_ADDRESS> --chain solana
 
 ---
 
-## 14. 常见问题
+## 15. 常见问题
 
 **Q: 我可以直接调用外部 API 吗？**
 A: 不可以。所有链上操作必须通过 onchainos CLI。如果你需要 onchainos 尚未提供的能力，请在 onchainos 仓库提交 feature request。
