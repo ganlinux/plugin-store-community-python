@@ -6,24 +6,26 @@
 
 ## 目录
 
-1. [什么是 plugin？](#1-什么是 plugin)
-2. [开始之前](#2-开始之前)
-3. [第一步：生成 plugin 脚手架](#3-第一步生成 plugin 脚手架)
-4. [第二步：编写 plugin.yaml](#4-第二步编写-pluginyaml)
-5. [第三步：编写 SKILL.md](#5-第三步编写-skillmd)
-6. [第四步：声明链和 API 调用](#6-第四步声明链和-api-调用)
-7. [第五步：本地验证](#7-第五步本地验证)
-8. [第六步：通过 Pull Request 提交](#8-第六步通过-pull-request-提交)
-9. [提交后会发生什么](#9-提交后会发生什么)
-10. [更新你的 plugin](#10-更新你的 plugin)
-11. [规则与限制](#11-规则与限制)
-12. [SKILL.md 写作指南](#12-skillmd-写作指南)
-13. [提交含源码的 plugin（Binary）](#13-提交含源码的 pluginbinary)
-14. [onchainos 命令参考](#14-onchainos-命令参考)
-15. [常见问题](#15-常见问题)
-16. [获取帮助](#16-获取帮助)(#15-常见问题)
+1. [什么是 plugin？](#section-1)
+2. [开始之前](#section-2)
+3. [第一步：生成 plugin 脚手架](#section-3)
+4. [第二步：编写 plugin.yaml](#section-4)
+5. [第三步：编写 SKILL.md](#section-5)
+6. [第四步：声明链和 API 调用](#section-6)
+7. [第五步：本地验证](#section-7)
+8. [第六步：通过 Pull Request 提交](#section-8)
+9. [提交后会发生什么](#section-9)
+10. [更新你的 plugin](#section-10)
+11. [规则与限制](#section-11)
+12. [SKILL.md 写作指南](#section-12)
+13. [提交含源码的 plugin（Binary）](#section-13)
+14. [onchainos 命令参考](#section-14)
+15. [常见问题](#section-15)
+16. [获取帮助](#section-16)
 
 ---
+
+<a id="section-1"></a>
 
 ## 1. 什么是 plugin？
 
@@ -58,6 +60,8 @@ plugin 有一个必须的核心：**SKILL.md** — 一个 Markdown 文档，教 
 
 ---
 
+<a id="section-2"></a>
+
 ## 2. 开始之前
 
 ### 前置条件
@@ -79,6 +83,8 @@ plugin 有一个必须的核心：**SKILL.md** — 一个 Markdown 文档，教 
 > **所有 plugin 必须通过 onchainos CLI 进行链上操作。** 不允许自行实现价格查询、钱包签名、交易构建或 RPC 调用。onchainos 已经提供了所有这些能力 — 你的 plugin 只需告诉 AI Agent 如何以及何时使用它们。
 
 ---
+
+<a id="section-3"></a>
 
 ## 3. 第一步：生成 plugin 脚手架
 
@@ -106,6 +112,8 @@ my-awesome-plugin/
 - 在 plugin.yaml 中添加 `build` 配置，指向你的仓库 + commit SHA
 
 ---
+
+<a id="section-4"></a>
 
 ## 4. 第二步：编写 plugin.yaml
 
@@ -215,6 +223,8 @@ git rev-parse HEAD
 - 保留前缀：`okx-`、`official-`、`plugin-store-`
 
 ---
+
+<a id="section-5"></a>
 
 ## 5. 第三步：编写 SKILL.md
 
@@ -362,6 +372,8 @@ tags:
 
 ---
 
+<a id="section-6"></a>
+
 ## 6. 第四步：声明链和 API 调用
 
 你只需要声明 `chains` 和 `api_calls` — 两者都是 plugin.yaml 中的顶级字段。实际权限（钱包访问、交易签名等）由提交时的 AI 审查自动检测。
@@ -379,6 +391,8 @@ api_calls:
 - **`api_calls`** — plugin 调用的外部 API 域名列表。Linter 会检查你的 SKILL.md 中的 URL 是否与此列表匹配。
 
 ---
+
+<a id="section-7"></a>
 
 ## 7. 第五步：本地验证
 
@@ -424,6 +438,8 @@ Linting ./my-awesome-plugin/...
 | E111 | 不允许 Binary 组件 | 社区 plugin 不能包含 Binary 组件 |
 
 ---
+
+<a id="section-8"></a>
 
 ## 8. 第六步：通过 Pull Request 提交
 
@@ -484,6 +500,8 @@ PR 模板会引导你完成检查清单。
 
 ---
 
+<a id="section-9"></a>
+
 ## 9. 提交后会发生什么
 
 ### 自动化检查（约 5 分钟）
@@ -520,6 +538,8 @@ Phase 3：AI 代码审查（Claude）
 
 ---
 
+<a id="section-10"></a>
+
 ## 10. 更新你的 plugin
 
 ### 内容更新（修改 SKILL.md、添加命令）
@@ -534,6 +554,8 @@ Phase 3：AI 代码审查（Claude）
 如果你的更新修改了 `chains` 或 `api_calls`，审核会更加严格。AI 审查报告会重点标注这些变化。
 
 ---
+
+<a id="section-11"></a>
 
 ## 11. 规则与限制
 
@@ -561,6 +583,8 @@ Phase 3：AI 代码审查（Claude）
 | Binary（源码） | 源码放在你自己的 GitHub 仓库，在 plugin.yaml 中添加 `build` 配置，我们编译 |
 
 ---
+
+<a id="section-12"></a>
 
 ## 12. SKILL.md 写作指南
 
@@ -594,6 +618,8 @@ onchainos market price --address <TOKEN_ADDRESS> --chain solana
 ```
 
 ---
+
+<a id="section-13"></a>
 
 ## 13. 提交含源码的 plugin（Binary）
 
@@ -711,6 +737,8 @@ your-username/my-binary-tool ← 你自己的 GitHub 仓库（源码）
 
 ---
 
+<a id="section-14"></a>
+
 ## 14. onchainos 命令参考
 
 你的 SKILL.md 只应使用 onchainos CLI 命令。以下是可用的顶级命令：
@@ -732,6 +760,8 @@ your-username/my-binary-tool ← 你自己的 GitHub 仓库（源码）
 要查看完整的子命令列表，运行 `onchainos <命令> --help` 或参阅 [onchainos 文档](https://github.com/okx/onchainos-skills)。
 
 ---
+
+<a id="section-15"></a>
 
 ## 15. 常见问题
 
@@ -773,6 +803,8 @@ A: 你声明了 Binary 组件但没有 `build` 配置。我们需要知道你的
 A: 我们的 CI 在 Ubuntu Linux 上编译。确保你的代码能在 Linux 上编译，而不仅仅是 macOS/Windows。查看 GitHub Actions 运行日志获取具体错误信息。
 
 ---
+
+<a id="section-16"></a>
 
 ## 16. 获取帮助
 

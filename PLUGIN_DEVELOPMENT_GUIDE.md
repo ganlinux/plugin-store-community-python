@@ -21,7 +21,7 @@
 13. [Submitting Plugins with Source Code (Binary)](#13-submitting-plugins-with-source-code-binary)
 14. [onchainos Command Reference](#14-onchainos-command-reference)
 15. [FAQ](#15-faq)
-16. [Getting Help](#16-getting-help)(#15-faq)
+16. [Getting Help](#16-getting-help)
 
 ---
 
