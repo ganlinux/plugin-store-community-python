@@ -156,39 +156,43 @@ jobs:
         run: |
           echo "Querying available Claude models..."
 
-          MODELS_JSON=$(curl -s https://api.anthropic.com/v1/models?limit=100 \
+          HTTP_CODE=$(curl -s -o /tmp/models.json -w "%{http_code}" \
+            https://api.anthropic.com/v1/models?limit=100 \
             -H "x-api-key: ${ANTHROPIC_API_KEY}" \
             -H "anthropic-version: 2023-06-01")
 
-          # Select the best model with this priority:
-          # 1. Prefer "opus" tier (most capable)
-          # 2. Then "sonnet" tier
-          # 3. Within same tier, prefer latest created_at
-          # 4. Filter only active models (type: "model")
-          #
-          # The jq logic:
-          # - Filter to claude models only
-          # - Assign a tier score: opus=3, sonnet=2, haiku=1
-          # - Sort by tier (desc), then created_at (desc)
-          # - Pick the first one
-          BEST_MODEL=$(echo "$MODELS_JSON" | jq -r '
-            [.data[]
-             | select(.id | startswith("claude-"))
-             | . + {
-                 tier_score: (
-                   if (.id | test("opus")) then 3
-                   elif (.id | test("sonnet")) then 2
-                   elif (.id | test("haiku")) then 1
-                   else 0
-                   end
-                 )
-               }
-            ]
-            | sort_by(.tier_score, .created_at)
-            | reverse
-            | first
-            | .id // empty
-          ')
+          echo "Models API HTTP status: ${HTTP_CODE}"
+
+          BEST_MODEL=""
+          if [ "$HTTP_CODE" = "200" ]; then
+            # Check if .data exists and is an array
+            HAS_DATA=$(jq -r '.data | type // "null"' /tmp/models.json 2>/dev/null || echo "null")
+
+            if [ "$HAS_DATA" = "array" ]; then
+              BEST_MODEL=$(jq -r '
+                [.data[]
+                 | select(.id | startswith("claude-"))
+                 | . + {
+                     tier_score: (
+                       if (.id | test("opus")) then 3
+                       elif (.id | test("sonnet")) then 2
+                       elif (.id | test("haiku")) then 1
+                       else 0
+                       end
+                     )
+                   }
+                ]
+                | sort_by(.tier_score, .created_at)
+                | reverse
+                | first
+                | .id // empty
+              ' /tmp/models.json 2>/dev/null || echo "")
+            else
+              echo "::warning::Models API response has no .data array"
+            fi
+          else
+            echo "::warning::Models API returned HTTP ${HTTP_CODE}"
+          fi
 
           if [ -z "$BEST_MODEL" ]; then
             echo "::warning::Could not determine best model, falling back to claude-sonnet-4-20250514"
