@@ -720,6 +720,14 @@ your-org/your-tool/
     └── index.ts         ← this path goes in build.main
 ```
 
+**Node.js:**
+```
+your-org/your-tool/
+├── package.json         ← MUST have name and version
+└── src/
+    └── index.js         ← this path goes in build.main
+```
+
 **Python:**
 ```
 your-org/your-tool/
@@ -743,6 +751,10 @@ cd your-tool && CGO_ENABLED=0 go build -o your-tool -ldflags="-s -w" .
 
 # TypeScript
 cd your-tool && bun install && bun build --compile src/index.ts --outfile your-tool
+# Verify: ./your-tool exists
+
+# Node.js
+cd your-tool && bun install && bun build --compile src/index.js --outfile your-tool
 # Verify: ./your-tool exists
 
 # Python
@@ -796,7 +808,7 @@ components:
     dir: skills/<your-plugin-name>
 
 build:
-  lang: rust                             # rust | go | typescript | python
+  lang: rust                             # rust | go | typescript | node | python
   source_repo: "your-org/your-tool"      # your GitHub repo from Step A
   source_commit: "a1b2c3d4e5f6..."       # SHA from Step C
   source_dir: "."                         # path within repo (usually root)
@@ -844,6 +856,7 @@ Open a PR from your fork to `okx/plugin-store-community`. Our CI will:
 | Go | `go.mod` | `go build` | Native binary |
 | TypeScript | `package.json` + `build.main` | `bun build --compile` | Bundled binary |
 | Python | `pyproject.toml` + `build.main` | `PyInstaller` | Bundled binary |
+| Node.js | `package.json` + `build.main` | `bun build --compile` | Bundled binary |
 
 ### Build Config — Complete Examples for Each Language
 
@@ -851,7 +864,7 @@ Every `build` field explained:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `lang` | Yes | `rust` \| `go` \| `typescript` \| `python` |
+| `lang` | Yes | `rust` \| `go` \| `typescript` \| `node` \| `python` |
 | `source_repo` | Yes | GitHub `owner/repo` containing your source code |
 | `source_commit` | Yes | Full 40-char commit SHA (get via `git rev-parse HEAD`) |
 | `source_dir` | No | Path within repo to source root (default: `.`) |
@@ -933,6 +946,27 @@ build:
 
 CI runs: `pip install pyinstaller pip-audit` → `pip install -e .` → `pip-audit` → `pyinstaller --onefile --name your-tool src/main.py`
 Output: self-contained binary with embedded Python (~50-100MB)
+
+#### Node.js
+
+```yaml
+build:
+  lang: node
+  source_repo: "your-org/your-node-tool"
+  source_commit: "e5f6789012345678901234567890abcdef012345"
+  source_dir: "."
+  entry: "package.json"                  # default for Node.js, can omit
+  binary_name: "your-tool"
+  main: "src/index.js"                   # REQUIRED for Node.js
+  targets:
+    - x86_64-unknown-linux-gnu
+    - aarch64-apple-darwin
+```
+
+CI runs: `bun install` → `bun build --compile src/index.js --outfile your-tool`
+Output: self-contained binary with embedded Bun runtime (~30-60MB)
+
+> Node.js and TypeScript use the same compiler (Bun). The only difference is the entry file extension (`.js` vs `.ts`).
 
 ### SKILL.md as the Orchestrator
 

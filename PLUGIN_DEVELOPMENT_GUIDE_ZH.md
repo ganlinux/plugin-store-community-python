@@ -757,6 +757,14 @@ your-org/your-tool/
     └── index.ts         ← 这个路径填到 build.main
 ```
 
+**Node.js：**
+```
+your-org/your-tool/
+├── package.json         ← 必须有 name 和 version
+└── src/
+    └── index.js         ← 这个路径填到 build.main
+```
+
 **Python：**
 ```
 your-org/your-tool/
@@ -780,6 +788,10 @@ cd your-tool && CGO_ENABLED=0 go build -o your-tool -ldflags="-s -w" .
 
 # TypeScript
 cd your-tool && bun install && bun build --compile src/index.ts --outfile your-tool
+# 验证：./your-tool 存在
+
+# Node.js
+cd your-tool && bun install && bun build --compile src/index.js --outfile your-tool
 # 验证：./your-tool 存在
 
 # Python
@@ -833,7 +845,7 @@ components:
     dir: skills/<your-plugin-name>
 
 build:
-  lang: rust                             # rust | go | typescript | python
+  lang: rust                             # rust | go | typescript | node | python
   source_repo: "your-org/your-tool"      # Step A 创建的 GitHub 仓库
   source_commit: "a1b2c3d4e5f6..."       # Step C 获取的 SHA
   source_dir: "."                         # 仓库内路径（通常是根目录）
@@ -881,6 +893,7 @@ git push origin submit/<your-plugin-name>
 | Go | `go.mod` | `go build` | 原生二进制 |
 | TypeScript | `package.json` + `build.main` | `bun build --compile` | 打包二进制 |
 | Python | `pyproject.toml` + `build.main` | `PyInstaller` | 打包二进制 |
+| Node.js | `package.json` + `build.main` | `bun build --compile` | 打包二进制 |
 
 ### Build 配置 — 每种语言的完整示例
 
@@ -888,7 +901,7 @@ git push origin submit/<your-plugin-name>
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| `lang` | 是 | `rust` \| `go` \| `typescript` \| `python` |
+| `lang` | 是 | `rust` \| `go` \| `typescript` \| `node` \| `python` |
 | `source_repo` | 是 | GitHub `owner/repo`，你的源码仓库 |
 | `source_commit` | 是 | 完整 40 位 commit SHA（通过 `git rev-parse HEAD` 获取） |
 | `source_dir` | 否 | 仓库内源码根目录（默认：`.`） |
@@ -970,6 +983,27 @@ build:
 
 CI 执行：`pip install pyinstaller pip-audit` → `pip install -e .` → `pip-audit` → `pyinstaller --onefile --name your-tool src/main.py`
 产物：内嵌 Python 解释器的独立二进制（约 50-100MB）
+
+#### Node.js
+
+```yaml
+build:
+  lang: node
+  source_repo: "your-org/your-node-tool"
+  source_commit: "e5f6789012345678901234567890abcdef012345"
+  source_dir: "."
+  entry: "package.json"                  # Node.js 默认值，可省略
+  binary_name: "your-tool"
+  main: "src/index.js"                   # Node.js 必填
+  targets:
+    - x86_64-unknown-linux-gnu
+    - aarch64-apple-darwin
+```
+
+CI 执行：`bun install` → `bun build --compile src/index.js --outfile your-tool`
+产物：内嵌 Bun 运行时的独立二进制（约 30-60MB）
+
+> Node.js 和 TypeScript 使用相同的编译器（Bun）。唯一区别是入口文件扩展名（`.js` vs `.ts`）。
 
 ### SKILL.md 作为编排者
 

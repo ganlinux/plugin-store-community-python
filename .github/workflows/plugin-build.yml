@@ -252,26 +252,25 @@ jobs:
           git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
           cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - uses: oven-sh/setup-bun@v2
 
-      - name: Install and test
+      - name: Install dependencies
         working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
-        run: |
-          npm ci 2>/dev/null || npm install
-          npm audit 2>&1 || true
-          npm run build --if-present 2>&1 || true
+        run: bun install
 
-      - name: Pack
+      - name: Compile to binary
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: bun build --compile "${{ needs.detect.outputs.build_main }}" --outfile "${{ needs.detect.outputs.binary_name }}"
+
+      - name: Verify artifact
         id: verify
-        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
         run: |
-          TARBALL=$(npm pack 2>/dev/null | tail -1)
-          if [ -f "$TARBALL" ]; then
-            SIZE=$(stat -c%s "$TARBALL")
-            echo "size=$((SIZE / 1024))KB" >> "$GITHUB_OUTPUT"
+          BIN="/tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}"
+          if [ -f "$BIN" ]; then
+            SIZE=$(stat -c%s "$BIN")
+            echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
             echo "status=pass" >> "$GITHUB_OUTPUT"
+            sha256sum "$BIN"
           else
             echo "status=fail" >> "$GITHUB_OUTPUT"
           fi
@@ -281,7 +280,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-node-${{ needs.detect.outputs.plugin_name }}
-          path: /tmp/source/${{ needs.detect.outputs.source_dir }}/*.tgz
+          path: /tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}
 
   # ═══════════════════════════════════════════════════════════════
   #  Python Build (PyInstaller)
