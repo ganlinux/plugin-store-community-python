@@ -283,7 +283,30 @@ jobs:
           # Read system prompt
           cp .github/prompts/ai-review-system.md /tmp/system_prompt.txt
 
-          # Combine: system prompt + onchainos context + plugin content
+          # Build security rules context from skill-scanner
+          {
+            echo "# OKX Skill Security Scanner Rules"
+            echo ""
+            echo "Apply these security rules when reviewing the plugin submission."
+            echo "For each rule that matches, include it in your Security Assessment section."
+            echo ""
+            if [ -f .github/security-rules/static-rules.md ]; then
+              cat .github/security-rules/static-rules.md
+              echo ""
+            fi
+            if [ -f .github/security-rules/llm-judges.md ]; then
+              cat .github/security-rules/llm-judges.md
+              echo ""
+            fi
+            if [ -f .github/security-rules/toxic-flows.md ]; then
+              cat .github/security-rules/toxic-flows.md
+            fi
+          } > /tmp/security_rules.txt
+
+          RULES_SIZE=$(wc -c < /tmp/security_rules.txt)
+          echo "Security rules context: ${RULES_SIZE} bytes"
+
+          # Combine: system prompt + security rules + onchainos context + plugin content
           MODEL="${{ steps.model.outputs.model }}"
           echo "Using model: ${MODEL}"
 
@@ -292,6 +315,7 @@ jobs:
             jq -n \
               --arg model "$MODEL" \
               --rawfile system /tmp/system_prompt.txt \
+              --rawfile rules /tmp/security_rules.txt \
               --rawfile onchainos /tmp/onchainos_context.txt \
               --rawfile plugin /tmp/plugin_content.txt \
               '{
@@ -300,7 +324,7 @@ jobs:
                 messages: [
                   {
                     role: "user",
-                    content: ($system + "\n\n---\n\n" + $onchainos + "\n\n---\n\n" + $plugin)
+                    content: ($system + "\n\n---\n\n" + $rules + "\n\n---\n\n" + $onchainos + "\n\n---\n\n" + $plugin)
                   }
                 ]
               }' > /tmp/api_request.json
@@ -308,6 +332,7 @@ jobs:
             jq -n \
               --arg model "$MODEL" \
               --rawfile system /tmp/system_prompt.txt \
+              --rawfile rules /tmp/security_rules.txt \
               --rawfile plugin /tmp/plugin_content.txt \
               '{
                 model: $model,
@@ -315,7 +340,7 @@ jobs:
                 messages: [
                   {
                     role: "user",
-                    content: ($system + "\n\n---\n\n(onchainos source not available — review based on prompt knowledge only)\n\n---\n\n" + $plugin)
+                    content: ($system + "\n\n---\n\n" + $rules + "\n\n---\n\n(onchainos source not available)\n\n---\n\n" + $plugin)
                   }
                 ]
               }' > /tmp/api_request.json
