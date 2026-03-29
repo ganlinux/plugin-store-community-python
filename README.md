@@ -1,13 +1,13 @@
 # Plugin Store Community
 
-Submit your plugin to the [Plugin Store](https://github.com/yz06276/plugin-store) ecosystem in 5 minutes.
+Submit your plugin to the [Plugin Store](https://github.com/okx/plugin-store) ecosystem in 5 minutes.
 
 ## Quick Start (5 steps)
 
 ### Step 1: Clone and create your plugin
 
 ```bash
-git clone --depth=1 git@github.com:yz06276/plugin-store-community.git
+git clone --depth=1 git@github.com:okx/plugin-store-community.git
 cd plugin-store-community
 plugin-store init my-plugin
 ```
@@ -95,7 +95,7 @@ plugin-store install my-plugin
 
 ## Getting Help
 
-- Open an [issue](https://github.com/yz06276/plugin-store-community/issues)
+- Open an [issue](https://github.com/okx/plugin-store-community/issues)
 - See `submissions/_example-plugin/` for a complete reference plugin
 - Read the full [Development Guide](./PLUGIN_DEVELOPMENT_GUIDE.md) for troubleshooting
 

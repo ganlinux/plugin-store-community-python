@@ -75,7 +75,7 @@ jobs:
 
             # Determine the skill component — community plugins store skills in this repo
             SKILL_DIR=$(yq '.components.skill.dir // ""' "$YAML_FILE")
-            SKILL_REPO="yz06276/plugin-store-community"
+            SKILL_REPO="okx/plugin-store-community"
 
             # Get the commit SHA of the current HEAD (pinned for security)
             COMMIT_SHA=$(git rev-parse HEAD)
@@ -158,7 +158,7 @@ jobs:
           PLUGIN_STORE_TOKEN: ${{ secrets.PLUGIN_STORE_TOKEN }}
         run: |
           # Clone the plugin-store repo
-          git clone --depth=1 "https://x-access-token:${PLUGIN_STORE_TOKEN}@github.com/yz06276/plugin-store.git" /tmp/plugin-store
+          git clone --depth=1 "https://x-access-token:${PLUGIN_STORE_TOKEN}@github.com/okx/plugin-store.git" /tmp/plugin-store
 
           cd /tmp/plugin-store
 

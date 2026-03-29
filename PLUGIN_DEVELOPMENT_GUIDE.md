@@ -87,7 +87,7 @@ Choose your path before starting:
 - **plugin-store CLI** installed:
   ```bash
   # macOS / Linux
-  curl -fsSL https://raw.githubusercontent.com/yz06276/plugin-store/main/install-local.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/okx/plugin-store/main/install-local.sh | bash
   ```
 - **onchainos CLI** installed (for testing your commands):
   ```bash
@@ -110,7 +110,7 @@ Choose your path before starting:
 First, clone the community repository, then run `init` inside it:
 
 ```bash
-git clone --depth=1 git@github.com:yz06276/plugin-store-community.git
+git clone --depth=1 git@github.com:okx/plugin-store-community.git
 cd plugin-store-community
 plugin-store init my-awesome-plugin
 ```
@@ -765,7 +765,7 @@ A: Our CI compiles on Ubuntu Linux. Ensure your code builds on Linux, not just m
 
 ## 16. Getting Help
 
-- Open an [issue](https://github.com/yz06276/plugin-store-community/issues) on GitHub
+- Open an [issue](https://github.com/okx/plugin-store-community/issues) on GitHub
 - See `submissions/_example-plugin/` for a complete reference plugin
 - Run `plugin-store lint` locally before submitting — it catches most issues
-- Check the [GitHub Actions logs](https://github.com/yz06276/plugin-store-community/actions) if your PR checks fail
+- Check the [GitHub Actions logs](https://github.com/okx/plugin-store-community/actions) if your PR checks fail

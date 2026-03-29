@@ -100,7 +100,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-lint-
 
       - name: Install plugin-store CLI
-        run: cargo install --git https://github.com/yz06276/plugin-store.git plugin-store
+        run: cargo install --git https://github.com/okx/plugin-store.git plugin-store
 
       - name: Run lint
         id: lint
