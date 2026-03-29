@@ -4,10 +4,13 @@ Submit your plugin to the [Plugin Store](https://github.com/okx/plugin-store) ec
 
 ## Quick Start (5 steps)
 
-### Step 1: Clone and create your plugin
+### Step 1: Fork, clone, and create your plugin
+
+1. Go to https://github.com/okx/plugin-store-community and click **Fork**
+2. Clone your fork and create a plugin:
 
 ```bash
-git clone --depth=1 git@github.com:okx/plugin-store-community.git
+git clone --depth=1 git@github.com:YOUR_USERNAME/plugin-store-community.git
 cd plugin-store-community
 plugin-store init my-plugin
 ```
@@ -68,7 +71,7 @@ git commit -m "[new-plugin] my-plugin v1.0.0"
 git push origin submit/my-plugin
 ```
 
-Then open a **Pull Request** on GitHub.
+Then go to GitHub and open a **Pull Request** from your fork to `okx/plugin-store-community`.
 
 ### Step 5: Wait for review
 

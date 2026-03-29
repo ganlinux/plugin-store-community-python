@@ -8,7 +8,7 @@
 
 1. [What is a Plugin?](#1-what-is-a-plugin)
 2. [Before You Start](#2-before-you-start)
-3. [Step 1: Clone and Scaffold Your Plugin](#3-step-1-scaffold-your-plugin)
+3. [Step 1: Fork, Clone, and Scaffold Your Plugin](#3-step-1-scaffold-your-plugin)
 4. [Step 2: Write plugin.yaml](#4-step-2-write-pluginyaml)
 5. [Step 3: Write SKILL.md](#5-step-3-write-skillmd)
 6. [Step 4: Declare API Calls](#6-step-4-declare-api-calls)
@@ -105,12 +105,13 @@ Choose your path before starting:
 
 ---
 
-## 3. Step 1: Clone and Scaffold Your Plugin
+## 3. Step 1: Fork, Clone, and Scaffold Your Plugin
 
-First, clone the community repository, then run `init` inside it:
+1. Go to https://github.com/okx/plugin-store-community and click **Fork**
+2. Clone your fork, then run `init` inside it:
 
 ```bash
-git clone --depth=1 git@github.com:okx/plugin-store-community.git
+git clone --depth=1 git@github.com:YOUR_USERNAME/plugin-store-community.git
 cd plugin-store-community
 plugin-store init my-awesome-plugin
 ```
@@ -453,7 +454,7 @@ Fix all errors (❌) before submitting. Warnings (⚠️) are advisory.
 
 ## 8. Step 6: Submit via Pull Request
 
-Since you already cloned the repo in Step 1 and your plugin is in `submissions/`, just create a branch and push:
+Since you already forked and cloned in Step 1, your plugin is in `submissions/`. Create a branch and push to your fork:
 
 ```bash
 git checkout -b submit/my-awesome-plugin
@@ -462,7 +463,7 @@ git commit -m "[new-plugin] my-awesome-plugin v1.0.0"
 git push origin submit/my-awesome-plugin
 ```
 
-Then open a Pull Request on GitHub. Use this title format:
+Then go to GitHub and open a Pull Request from your fork to `okx/plugin-store-community`. Use this title format:
 
 ```
 [new-plugin] my-awesome-plugin v1.0.0

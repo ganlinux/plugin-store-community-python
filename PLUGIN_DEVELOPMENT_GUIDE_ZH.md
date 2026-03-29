@@ -8,7 +8,7 @@
 
 1. [什么是 plugin？](#section-1)
 2. [开始之前](#section-2)
-3. [第一步：克隆仓库并生成 plugin 脚手架](#section-3)
+3. [第一步：Fork、克隆并生成 plugin 脚手架](#section-3)
 4. [第二步：编写 plugin.yaml](#section-4)
 5. [第三步：编写 SKILL.md](#section-5)
 6. [第四步：声明 API 调用](#section-6)
@@ -111,12 +111,13 @@ plugin 有一个必须的核心：**SKILL.md** — 一个 Markdown 文档，教 
 
 <a id="section-3"></a>
 
-## 3. 第一步：克隆仓库并生成 plugin 脚手架
+## 3. 第一步：Fork、克隆并生成 plugin 脚手架
 
-先克隆 community 仓库，再在里面运行 `init`：
+1. 打开 https://github.com/okx/plugin-store-community 点击 **Fork**
+2. 克隆你的 fork，然后运行 `init`：
 
 ```bash
-git clone --depth=1 git@github.com:okx/plugin-store-community.git
+git clone --depth=1 git@github.com:YOUR_USERNAME/plugin-store-community.git
 cd plugin-store-community
 plugin-store init my-awesome-plugin
 ```
@@ -477,7 +478,7 @@ Linting ./my-awesome-plugin/...
 
 ## 8. 第六步：通过 Pull Request 提交
 
-你已经在第一步克隆了仓库，plugin 也在 `submissions/` 里了，直接创建分支并推送：
+你已经在第一步 fork 并克隆了仓库，plugin 在 `submissions/` 里，创建分支并推送到你的 fork：
 
 ```bash
 git checkout -b submit/my-awesome-plugin
@@ -486,7 +487,7 @@ git commit -m "[new-plugin] my-awesome-plugin v1.0.0"
 git push origin submit/my-awesome-plugin
 ```
 
-然后在 GitHub 上创建 Pull Request。
+然后在 GitHub 上从你的 fork 向 `okx/plugin-store-community` 创建 Pull Request。
 
 在 GitHub 上从你的分支创建 Pull Request。使用以下标题格式：
 
