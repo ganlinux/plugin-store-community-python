@@ -76,7 +76,8 @@ jobs:
                   gh.write(f"build_lang={build.get('lang', '')}\n")
                   gh.write(f"source_repo={build.get('source_repo', '')}\n")
                   gh.write(f"source_commit={build.get('source_commit', '')}\n")
-                  gh.write(f"source_dir={build.get('source_dir', '.')}\n")
+                  sd = build.get('source_dir', '.')
+                  gh.write(f"source_dir={'' if sd == '.' else sd}\n")
                   gh.write(f"binary_name={build.get('binary_name', '')}\n")
                   gh.write(f"build_main={build.get('main', '')}\n")
           PYEOF
