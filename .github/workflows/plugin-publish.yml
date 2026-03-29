@@ -17,6 +17,14 @@ on:
 permissions:
   contents: write
 
+# ── FIX: Registry race condition ────────────────────────────────
+# Only one publish workflow runs at a time. If multiple PRs merge
+# in quick succession, later runs queue instead of running concurrently.
+# This prevents concurrent registry.json pushes from overwriting each other.
+concurrency:
+  group: publish-pipeline
+  cancel-in-progress: false
+
 jobs:
   # ═══════════════════════════════════════════════════════════════
   #  Step 1: Detect what changed and extract build info
@@ -97,7 +105,7 @@ jobs:
   #  Step 2: Multi-platform build for binary plugins
   # ═══════════════════════════════════════════════════════════════
   build-release:
-    name: Build ${{ matrix.plugin }} (${{ matrix.target }})
+    name: Build (${{ matrix.target }})
     needs: detect
     if: needs.detect.outputs.has_builds == 'true'
     runs-on: ${{ matrix.os }}
@@ -115,8 +123,14 @@ jobs:
             os: macos-latest
           - target: x86_64-apple-darwin
             os: macos-latest
-        # Dynamic: we iterate over build_plugins in the step itself
     steps:
+      # ── FIX: Install Go on macOS runners (not pre-installed) ──
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
       - name: Process each build plugin
         id: build
         env:
@@ -150,6 +164,8 @@ jobs:
                 cp "target/${{ matrix.target }}/release/${BIN}" "/tmp/${BIN}-${{ matrix.target }}"
                 ;;
               go)
+                # ── FIX: Use explicit case for GOOS/GOARCH ──────
+                # sed 's/.*-//' on x86_64-unknown-linux-gnu gives "gnu" not "linux"
                 case "${{ matrix.target }}" in
                   x86_64-unknown-linux-gnu) GOOS=linux; GOARCH=amd64 ;;
                   aarch64-apple-darwin)     GOOS=darwin; GOARCH=arm64 ;;
@@ -419,5 +435,17 @@ jobs:
           git commit -m "Update registry.json with community plugins
 
           Auto-generated from plugin-store-community submissions."
-          git push
-          echo "Registry updated successfully"
+
+          # ── FIX: Retry push with pull-rebase on conflict ──────
+          # Even with concurrency group, edge cases (manual push, other workflows)
+          # can cause push failures. Retry up to 3 times with pull --rebase.
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "Registry updated successfully"
+              exit 0
+            fi
+            echo "Push failed (attempt $attempt/3), pulling latest and retrying..."
+            git pull --rebase origin main
+          done
+          echo "ERROR: Failed to push registry after 3 attempts" >&2
+          exit 1
